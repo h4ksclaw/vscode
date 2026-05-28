@@ -541,63 +541,43 @@ export class ConfiguredAgentPluginDiscovery extends AbstractAgentPluginDiscovery
 		const sources: IPluginSource[] = [];
 		const userHome = await this._getUserHome();
 
-		// User-configured filesystem paths
-		for (const [path, enabled] of Object.entries(this._pluginLocationsConfig.get())) {
-			if (!path.trim() || enabled === false) {
-				continue;
-			}
+		// Two configuration shapes feed the same discovery pipeline:
+		// - User-configured filesystem paths in `chat.pluginLocations` — removable
+		//   by re-writing the user setting.
+		// - Enterprise-managed plugin IDs in `chat.plugins.enabledPlugins` (delivered
+		//   via the `ChatEnabledPlugins` policy) — not removable from the UI.
+		const groups: ReadonlyArray<{ entries: Record<string, boolean>; removable: boolean; label: string }> = [
+			{ entries: this._pluginLocationsConfig.get(), removable: true, label: 'plugin path' },
+			{ entries: this._enterpriseEnabledPluginsConfig.get(), removable: false, label: 'enterprise plugin path' },
+		];
 
-			const resources = this._resolvePluginPath(path.trim(), userHome);
-			for (const resource of resources) {
-				let stat;
-				try {
-					stat = await this._fileService.resolve(resource);
-				} catch {
-					this._logService.debug(`[ConfiguredAgentPluginDiscovery] Could not resolve plugin path: ${resource.toString()}`);
+		for (const { entries, removable, label } of groups) {
+			for (const [key, enabled] of Object.entries(entries)) {
+				const trimmed = key.trim();
+				if (!trimmed || enabled === false) {
 					continue;
 				}
 
-				if (!stat.isDirectory) {
-					this._logService.debug(`[ConfiguredAgentPluginDiscovery] Plugin path is not a directory: ${resource.toString()}`);
-					continue;
+				for (const resource of this._resolvePluginPath(trimmed, userHome)) {
+					let stat;
+					try {
+						stat = await this._fileService.resolve(resource);
+					} catch {
+						this._logService.debug(`[ConfiguredAgentPluginDiscovery] Could not resolve ${label}: ${resource.toString()}`);
+						continue;
+					}
+
+					if (!stat.isDirectory) {
+						this._logService.debug(`[ConfiguredAgentPluginDiscovery] ${label} is not a directory: ${resource.toString()}`);
+						continue;
+					}
+
+					sources.push({
+						uri: stat.resource,
+						fromMarketplace: this._pluginMarketplaceService.getMarketplacePluginMetadata(stat.resource),
+						remove: removable ? () => this._removePluginPath(key) : undefined,
+					});
 				}
-
-				const fromMarketplace = this._pluginMarketplaceService.getMarketplacePluginMetadata(stat.resource);
-				const configKey = path;
-				sources.push({
-					uri: stat.resource,
-					fromMarketplace,
-					remove: () => this._removePluginPath(configKey),
-				});
-			}
-		}
-
-		// Enterprise-managed plugin IDs (`<plugin>@<marketplace>` form)
-		for (const [pluginId, enabled] of Object.entries(this._enterpriseEnabledPluginsConfig.get())) {
-			if (!pluginId.trim() || enabled === false) {
-				continue;
-			}
-
-			const resources = this._resolvePluginPath(pluginId.trim(), userHome);
-			for (const resource of resources) {
-				let stat;
-				try {
-					stat = await this._fileService.resolve(resource);
-				} catch {
-					this._logService.debug(`[ConfiguredAgentPluginDiscovery] Could not resolve enterprise plugin path: ${resource.toString()}`);
-					continue;
-				}
-
-				if (!stat.isDirectory) {
-					this._logService.debug(`[ConfiguredAgentPluginDiscovery] Enterprise plugin path is not a directory: ${resource.toString()}`);
-					continue;
-				}
-
-				const fromMarketplace = this._pluginMarketplaceService.getMarketplacePluginMetadata(stat.resource);
-				sources.push({
-					uri: stat.resource,
-					fromMarketplace,
-				});
 			}
 		}
 

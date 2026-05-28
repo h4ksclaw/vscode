@@ -13,14 +13,14 @@ import { Disposable } from '../../../../base/common/lifecycle.js';
 import { equals } from '../../../../base/common/objects.js';
 import { isWeb } from '../../../../base/common/platform.js';
 import { IDefaultChatAgent } from '../../../../base/common/product.js';
-import { isString, isUndefined, Mutable } from '../../../../base/common/types.js';
+import { isObject, isString, isUndefined, Mutable } from '../../../../base/common/types.js';
 import { IRequestContext } from '../../../../base/parts/request/common/request.js';
 import { localize2 } from '../../../../nls.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKey, IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
-import { IDefaultAccountProvider, IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
+import { IDefaultAccountProvider, IDefaultAccountService, ManagedSettingsFetchStatus } from '../../../../platform/defaultAccount/common/defaultAccount.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
@@ -102,20 +102,21 @@ export interface IManagedSettingsResponse {
  */
 export function adaptManagedSettings(response: IManagedSettingsResponse, onWarn?: (msg: string) => void): Partial<IPolicyData> {
 	let extraKnownMarketplaces: readonly string[] | undefined;
-	if (response.extraKnownMarketplaces && typeof response.extraKnownMarketplaces === 'object' && !Array.isArray(response.extraKnownMarketplaces)) {
+	if (isObject(response.extraKnownMarketplaces)) {
 		const seen = new Set<string>();
 		const flattened: string[] = [];
 		for (const [id, entry] of Object.entries(response.extraKnownMarketplaces)) {
-			if (!entry || typeof entry !== 'object' || !entry.source || typeof entry.source !== 'object') {
+			if (!isObject(entry) || !isObject(entry.source)) {
 				onWarn?.(`[DefaultAccount] Skipping malformed extraKnownMarketplaces entry "${id}": expected { source: { source, repo|url } }`);
 				continue;
 			}
 			const src = entry.source as { source?: string; repo?: string; url?: string; ref?: string };
+			const suffix = src.ref ? `#${src.ref}` : '';
 			let ref: string | undefined;
-			if (src.source === 'github' && typeof src.repo === 'string') {
-				ref = `${src.repo}${src.ref ? `#${src.ref}` : ''}`;
-			} else if (src.source === 'git' && typeof src.url === 'string') {
-				ref = `${src.url}${src.ref ? `#${src.ref}` : ''}`;
+			if (src.source === 'github' && isString(src.repo)) {
+				ref = `${src.repo}${suffix}`;
+			} else if (src.source === 'git' && isString(src.url)) {
+				ref = `${src.url}${suffix}`;
 			} else {
 				onWarn?.(`[DefaultAccount] Skipping extraKnownMarketplaces entry "${id}": unknown source type "${src.source}"`);
 				continue;
@@ -128,13 +129,8 @@ export function adaptManagedSettings(response: IManagedSettingsResponse, onWarn?
 		extraKnownMarketplaces = flattened;
 	}
 
-	let enabledPlugins: Record<string, boolean> | undefined;
-	if (response.enabledPlugins && typeof response.enabledPlugins === 'object' && !Array.isArray(response.enabledPlugins)) {
-		enabledPlugins = response.enabledPlugins;
-	}
-
 	return {
-		enabledPlugins,
+		enabledPlugins: isObject(response.enabledPlugins) ? response.enabledPlugins as Record<string, boolean> : undefined,
 		extraKnownMarketplaces,
 		strictKnownMarketplaces: typeof response.strictKnownMarketplaces === 'boolean' ? response.strictKnownMarketplaces : undefined,
 	};
@@ -190,7 +186,7 @@ export class DefaultAccountService extends Disposable implements IDefaultAccount
 	get policyData(): IPolicyData | null { return this.defaultAccountProvider?.policyData ?? null; }
 	get copilotTokenInfo(): ICopilotTokenInfo | null { return this.defaultAccountProvider?.copilotTokenInfo ?? null; }
 
-	get managedSettingsFetchStatus(): number | 'ok' | 'no-url' | 'no-response' | 'parse-error' | null { return this.defaultAccountProvider?.managedSettingsFetchStatus ?? null; }
+	get managedSettingsFetchStatus(): ManagedSettingsFetchStatus { return this.defaultAccountProvider?.managedSettingsFetchStatus ?? null; }
 	get managedSettingsFetchedAt(): number | null { return this.defaultAccountProvider?.managedSettingsFetchedAt ?? null; }
 
 	private readonly initBarrier = new Barrier();
@@ -327,8 +323,8 @@ class DefaultAccountProvider extends Disposable implements IDefaultAccountProvid
 	private _copilotTokenInfo: ICopilotTokenInfo | null = null;
 	get copilotTokenInfo(): ICopilotTokenInfo | null { return this._copilotTokenInfo; }
 
-	private _managedSettingsFetchStatus: number | 'ok' | 'no-url' | 'no-response' | 'parse-error' | null = null;
-	get managedSettingsFetchStatus(): number | 'ok' | 'no-url' | 'no-response' | 'parse-error' | null { return this._managedSettingsFetchStatus; }
+	private _managedSettingsFetchStatus: ManagedSettingsFetchStatus = null;
+	get managedSettingsFetchStatus(): ManagedSettingsFetchStatus { return this._managedSettingsFetchStatus; }
 	get managedSettingsFetchedAt(): number | null { return this._policyData?.managedSettingsFetchedAt ?? null; }
 
 	private readonly _onDidChangeDefaultAccount = this._register(new Emitter<IDefaultAccount | null>());

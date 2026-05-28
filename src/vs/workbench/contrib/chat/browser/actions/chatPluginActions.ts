@@ -19,7 +19,7 @@ import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
 import { ChatConfiguration } from '../../common/constants.js';
 import { IAgentPluginRepositoryService } from '../../common/plugins/agentPluginRepositoryService.js';
 import { IPluginInstallService } from '../../common/plugins/pluginInstallService.js';
-import { type IMarketplaceReference, MarketplaceReferenceKind, parseMarketplaceReference, parseMarketplaceReferences } from '../../common/plugins/pluginMarketplaceService.js';
+import { type IMarketplaceReference, MarketplaceReferenceKind, parseMarketplaceReference, parseMarketplaceReferences, readConfiguredMarketplaces } from '../../common/plugins/pluginMarketplaceService.js';
 import { InstalledAgentPluginsViewId } from '../chat.js';
 import { CHAT_CATEGORY, CHAT_CONFIG_MENU_ID } from './chatActions.js';
 
@@ -141,26 +141,6 @@ class InstallFromSourceAction extends Action2 {
 interface IMarketplaceQuickPickItem extends IQuickPickItem {
 	readonly reference: IMarketplaceReference;
 	readonly managedByPolicy: boolean;
-}
-
-function readConfiguredMarketplaces(configurationService: IConfigurationService) {
-	const inspected = configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
-	const defaultValues = inspected.defaultValue ?? [];
-	const userValues = inspected.userValue ?? [];
-	const policyValues = inspected.policyValue ?? [];
-
-	return {
-		effectiveValues: [
-			...defaultValues,
-			...userValues,
-			...policyValues,
-		],
-		editableValues: [
-			...defaultValues,
-			...userValues,
-		],
-		policyCanonicalIds: new Set(parseMarketplaceReferences(policyValues).map(reference => reference.canonicalId)),
-	};
 }
 
 class ManagePluginMarketplacesAction extends Action2 {

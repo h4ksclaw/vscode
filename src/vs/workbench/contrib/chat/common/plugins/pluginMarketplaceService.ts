@@ -28,11 +28,11 @@ import { IAgentPluginRepositoryService } from './agentPluginRepositoryService.js
 import { FileBackedInstalledPluginsStore, IStoredInstalledPlugin } from './fileBackedInstalledPluginsStore.js';
 import { IWorkspacePluginSettingsService } from './workspacePluginSettingsService.js';
 import { IWorkspaceTrustManagementService } from '../../../../../platform/workspace/common/workspaceTrust.js';
-import { type IMarketplaceReference, deduplicateMarketplaceReferences, MarketplaceReferenceKind, parseMarketplaceReference, parseMarketplaceReferences } from './marketplaceReference.js';
+import { type IMarketplaceReference, deduplicateMarketplaceReferences, MarketplaceReferenceKind, parseMarketplaceReference, parseMarketplaceReferences, readConfiguredMarketplaces } from './marketplaceReference.js';
 
 // Re-export marketplace reference types for downstream consumers.
-export { deduplicateMarketplaceReferences, MarketplaceReferenceKind, parseMarketplaceReference, parseMarketplaceReferences } from './marketplaceReference.js';
-export type { IMarketplaceReference } from './marketplaceReference.js';
+export { deduplicateMarketplaceReferences, MarketplaceReferenceKind, parseMarketplaceReference, parseMarketplaceReferences, readConfiguredMarketplaces } from './marketplaceReference.js';
+export type { IConfiguredMarketplaces, IMarketplaceReference } from './marketplaceReference.js';
 
 export const enum MarketplaceType {
 	Copilot = 'copilot',
@@ -411,15 +411,13 @@ export class PluginMarketplaceService extends Disposable implements IPluginMarke
 			return [];
 		}
 
-		// Read default + user + policy values separately and dedup-concat so
-		// enterprise policy entries (via the `ChatPluginMarketplaces` policy)
-		// are added alongside user-configured entries AND the built-in
-		// marketplace defaults (e.g. `github/copilot-plugins`). `getValue()`
-		// alone would surface only the policy value when the policy is set.
-		const inspected = this._configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
+		// Read default + user + policy values together so enterprise policy
+		// entries (via the `ChatPluginMarketplaces` policy) are added alongside
+		// user-configured entries AND the built-in marketplace defaults.
+		// `getValue()` alone would surface only the policy value when set.
 		const seen = new Set<string>();
 		const configuredRefs: unknown[] = [];
-		for (const entry of [...(inspected.defaultValue ?? []), ...(inspected.userValue ?? []), ...(inspected.policyValue ?? [])]) {
+		for (const entry of readConfiguredMarketplaces(this._configurationService).effectiveValues) {
 			const key = typeof entry === 'string' ? entry : JSON.stringify(entry);
 			if (seen.has(key)) {
 				continue;
@@ -627,9 +625,7 @@ export class PluginMarketplaceService extends Disposable implements IPluginMarke
 		// Only marketplaces present in `chat.plugins.marketplaces` (merged
 		// user + policy) are considered trusted.
 		if (this._configurationService.getValue<boolean>(ChatConfiguration.StrictMarketplaces)) {
-			const inspected = this._configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
-			const configured = [...(inspected.defaultValue ?? []), ...(inspected.userValue ?? []), ...(inspected.policyValue ?? [])];
-			const refs = parseMarketplaceReferences(configured);
+			const refs = parseMarketplaceReferences(readConfiguredMarketplaces(this._configurationService).effectiveValues);
 			return refs.some(r => r.canonicalId === ref.canonicalId);
 		}
 		return this._trustedMarketplacesStore.get().includes(ref.canonicalId);
