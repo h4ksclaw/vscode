@@ -233,7 +233,7 @@ export class PluginInstallService implements IPluginInstallService {
 	}
 
 	private _addMarketplaceToConfig(reference: IMarketplaceReference) {
-		const inspected = this._configurationService.inspect<unknown[]>(ChatConfiguration.PluginMarketplaces);
+		const inspected = this._configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
 		const currentValues = [
 			...(inspected.defaultValue ?? []),
 			...(inspected.userValue ?? []),

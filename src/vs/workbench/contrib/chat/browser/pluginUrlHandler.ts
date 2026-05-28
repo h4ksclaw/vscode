@@ -184,7 +184,7 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 			return true;
 		}
 
-		const inspected = this._configurationService.inspect<unknown[]>(ChatConfiguration.PluginMarketplaces);
+		const inspected = this._configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
 		const existingRefs = parseMarketplaceReferences([
 			...(inspected.defaultValue ?? []),
 			...(inspected.userValue ?? []),

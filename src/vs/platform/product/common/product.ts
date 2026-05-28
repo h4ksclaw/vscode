@@ -74,7 +74,6 @@ else {
 			defaultChatAgent: {
 				extensionId: 'GitHub.copilot',
 				chatExtensionId: 'GitHub.copilot-chat',
-				managedSettingsUrl: 'https://api.github.com/copilot_internal/managed_settings',
 				provider: {
 					default: {
 						id: 'github',

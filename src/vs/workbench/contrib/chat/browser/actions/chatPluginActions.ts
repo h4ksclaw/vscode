@@ -144,7 +144,7 @@ interface IMarketplaceQuickPickItem extends IQuickPickItem {
 }
 
 function readConfiguredMarketplaces(configurationService: IConfigurationService) {
-	const inspected = configurationService.inspect<unknown[]>(ChatConfiguration.PluginMarketplaces);
+	const inspected = configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
 	const defaultValues = inspected.defaultValue ?? [];
 	const userValues = inspected.userValue ?? [];
 	const policyValues = inspected.policyValue ?? [];

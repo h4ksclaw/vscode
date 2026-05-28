@@ -887,7 +887,7 @@ configurationRegistry.registerConfiguration({
 				localization: {
 					description: {
 						key: 'chat.plugins.enabledPlugins.policy',
-						value: nls.localize('chat.plugins.enabledPlugins.policy', "Enterprise-managed plugin enablement. Keys are plugin IDs in `<plugin>@<marketplace>` form; values enable or disable the plugin. Merged with user-configured path entries."),
+						value: nls.localize('chat.plugins.enabledPlugins.policy', "Plugin enablement. Keys are plugin IDs in `<plugin>@<marketplace>` form; values enable or disable the plugin."),
 					}
 				},
 			},
@@ -898,7 +898,7 @@ configurationRegistry.registerConfiguration({
 				type: 'string',
 			},
 			markdownDescription: nls.localize('chat.plugins.marketplaces', "Plugin marketplaces to query. Entries may be GitHub shorthand (`owner/repo` or `owner/repo#ref`), direct Git repository URIs (`https://...git`, `ssh://...git`, or `git@host:path.git`, each optionally suffixed with `#ref`), or local repository URIs (`file:///...`). Equivalent GitHub shorthand and URI entries are deduplicated."),
-			default: ['github/copilot-plugins', 'github/awesome-copilot#marketplace'],
+			default: [],
 			scope: ConfigurationScope.APPLICATION,
 			tags: ['experimental'],
 			policy: {
@@ -909,7 +909,7 @@ configurationRegistry.registerConfiguration({
 				localization: {
 					description: {
 						key: 'chat.plugins.marketplaces.policy',
-						value: nls.localize('chat.plugins.marketplaces.policy', "Enterprise-managed list of plugin marketplaces to query. Entries are GitHub shorthand (`owner/repo[#ref]`) or Git URIs (`<url>[#ref]`). Merged with user-configured entries."),
+						value: nls.localize('chat.plugins.marketplaces.policy', "Plugin marketplaces to query. Entries are GitHub shorthand (`owner/repo[#ref]`) or Git URIs (`<url>[#ref]`)."),
 					}
 				},
 			},
@@ -929,7 +929,7 @@ configurationRegistry.registerConfiguration({
 				localization: {
 					description: {
 						key: 'chat.plugins.strictMarketplaces.policy',
-						value: nls.localize('chat.plugins.strictMarketplaces.policy', "When enabled by enterprise policy, only marketplaces listed in `chat.plugins.marketplaces` are trusted; plugins from any other marketplace will not load."),
+						value: nls.localize('chat.plugins.strictMarketplaces.policy', "Only trust marketplaces listed in `chat.plugins.marketplaces`; plugins from any other marketplace will not load."),
 					}
 				},
 			},

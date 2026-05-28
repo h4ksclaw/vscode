@@ -416,7 +416,7 @@ export class PluginMarketplaceService extends Disposable implements IPluginMarke
 		// are added alongside user-configured entries AND the built-in
 		// marketplace defaults (e.g. `github/copilot-plugins`). `getValue()`
 		// alone would surface only the policy value when the policy is set.
-		const inspected = this._configurationService.inspect<unknown[]>(ChatConfiguration.PluginMarketplaces);
+		const inspected = this._configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
 		const seen = new Set<string>();
 		const configuredRefs: unknown[] = [];
 		for (const entry of [...(inspected.defaultValue ?? []), ...(inspected.userValue ?? []), ...(inspected.policyValue ?? [])]) {
@@ -627,7 +627,7 @@ export class PluginMarketplaceService extends Disposable implements IPluginMarke
 		// Only marketplaces present in `chat.plugins.marketplaces` (merged
 		// user + policy) are considered trusted.
 		if (this._configurationService.getValue<boolean>(ChatConfiguration.StrictMarketplaces)) {
-			const inspected = this._configurationService.inspect<unknown[]>(ChatConfiguration.PluginMarketplaces);
+			const inspected = this._configurationService.inspect<(string | object)[]>(ChatConfiguration.PluginMarketplaces);
 			const configured = [...(inspected.defaultValue ?? []), ...(inspected.userValue ?? []), ...(inspected.policyValue ?? [])];
 			const refs = parseMarketplaceReferences(configured);
 			return refs.some(r => r.canonicalId === ref.canonicalId);
