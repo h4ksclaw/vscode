@@ -24,7 +24,7 @@ import { IDefaultAccountProvider, IDefaultAccountService } from '../../../../pla
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
-import { asJson, IRequestService, isClientError, isSuccess } from '../../../../platform/request/common/request.js';
+import { asJson, IRequestService, isClientError, isSuccess, readHeader, retryAfterFromHeaders } from '../../../../platform/request/common/request.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
@@ -69,37 +69,6 @@ const MANAGED_SETTINGS_REQUEST_TIMEOUT_MS = 5000;
 
 interface ITokenEntitlementsResponse {
 	token: string;
-}
-
-/**
- * Reads a header value tolerating array-shaped values and case-insensitive
- * lookups. Mirrors the small helper in `githubRepoFetcher.ts`; duplicated
- * here because the contrib-layer module sits above this services-layer file.
- */
-function readHeader(headers: Record<string, string | string[] | undefined> | undefined, name: string): string | undefined {
-	if (!headers) {
-		return undefined;
-	}
-	const value = headers[name] ?? headers[name.toLowerCase()];
-	if (Array.isArray(value)) {
-		return value[0];
-	}
-	return value;
-}
-
-/**
- * Parses the `Retry-After` header as a number of seconds. Returns undefined
- * if absent or unparseable. The HTTP-date form is intentionally not parsed
- * — `/copilot_internal/*` endpoints use numeric seconds, matching the public
- * GitHub API.
- */
-function retryAfterFromHeaders(headers: Record<string, string | string[] | undefined> | undefined): number | undefined {
-	const value = readHeader(headers, 'retry-after');
-	if (!value) {
-		return undefined;
-	}
-	const parsed = parseInt(value, 10);
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 /**
